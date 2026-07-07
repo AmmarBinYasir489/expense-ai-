@@ -87,6 +87,61 @@ export function byMonth(txs: Transaction[], months = 6): MonthBar[] {
   return buckets;
 }
 
+export type CategoryChange = {
+  category: string;
+  thisMonth: number;
+  lastMonth: number;
+  changePct: number | null; // null when there was no spending last month
+};
+
+// This-month vs last-month expense per category, sorted by largest increase.
+export function categoryMonthChanges(txs: Transaction[]): CategoryChange[] {
+  const now = new Date();
+  const thisKey = monthKey(now);
+  const lastKey = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+
+  const map = new Map<string, { thisMonth: number; lastMonth: number }>();
+  for (const t of txs) {
+    if (t.type !== "expense") continue;
+    const key = monthKey(txDate(t));
+    if (key !== thisKey && key !== lastKey) continue;
+    const cat = t.category || "Other";
+    const entry = map.get(cat) ?? { thisMonth: 0, lastMonth: 0 };
+    if (key === thisKey) entry.thisMonth += Number(t.amount) || 0;
+    else entry.lastMonth += Number(t.amount) || 0;
+    map.set(cat, entry);
+  }
+
+  return [...map.entries()]
+    .map(([category, v]) => ({
+      category,
+      thisMonth: v.thisMonth,
+      lastMonth: v.lastMonth,
+      changePct:
+        v.lastMonth > 0
+          ? ((v.thisMonth - v.lastMonth) / v.lastMonth) * 100
+          : null,
+    }))
+    .sort((a, b) => (b.changePct ?? -Infinity) - (a.changePct ?? -Infinity));
+}
+
+// Whether income categorized as salary landed this month vs. previous months.
+function salaryStatus(txs: Transaction[]): "received" | "pending" | "unknown" {
+  const now = new Date();
+  const thisKey = monthKey(now);
+  let hadSalaryBefore = false;
+  let salaryThisMonth = false;
+  for (const t of txs) {
+    if (t.type !== "income") continue;
+    if (!/salary|payroll|wage|paycheck/i.test(t.category)) continue;
+    if (monthKey(txDate(t)) === thisKey) salaryThisMonth = true;
+    else hadSalaryBefore = true;
+  }
+  if (salaryThisMonth) return "received";
+  if (hadSalaryBefore) return "pending";
+  return "unknown";
+}
+
 export type Insight = { tone: "good" | "warn" | "info"; text: string };
 
 export function computeInsights(txs: Transaction[]): Insight[] {
@@ -116,24 +171,52 @@ export function computeInsights(txs: Transaction[]): Insight[] {
     }
   }
 
-  // Top category + savings suggestion
-  if (cats.length > 0) {
+  // Biggest per-category swing this month vs last month
+  const changes = categoryMonthChanges(txs).filter(
+    (c) => c.changePct !== null && Math.abs(c.changePct) >= 15
+  );
+  const biggestUp = changes[0];
+  if (biggestUp && (biggestUp.changePct ?? 0) > 0) {
+    const pct = Math.round(biggestUp.changePct!);
+    insights.push({
+      tone: "warn",
+      text:
+        pct >= 100
+          ? `${biggestUp.category} spending ${
+              pct >= 100 && pct < 200 ? "doubled" : `is up ${pct}%`
+            } this month (${formatMoney(biggestUp.thisMonth)}).`
+          : `You spent ${pct}% more on ${biggestUp.category} this month.`,
+    });
+  }
+  const biggestDown = [...changes].reverse()[0];
+  if (biggestDown && (biggestDown.changePct ?? 0) <= -15) {
+    insights.push({
+      tone: "good",
+      text: `${biggestDown.category} is ${Math.abs(
+        Math.round(biggestDown.changePct!)
+      )}% lower than last month.`,
+    });
+  }
+
+  // Category share of total expenses
+  if (cats.length > 0 && totals.expense > 0) {
     const top = cats[0];
+    const share = Math.round((top.total / totals.expense) * 100);
     insights.push({
       tone: "info",
-      text: `Your highest spending category is ${top.category} (${formatMoney(
+      text: `${top.category} accounts for ${share}% of your total spending (${formatMoney(
         top.total
       )}).`,
     });
-    const saving = Math.round(top.total * 0.2);
-    if (saving > 0) {
-      insights.push({
-        tone: "good",
-        text: `Cutting ${top.category} by 20% would save about ${formatMoney(
-          saving
-        )}.`,
-      });
-    }
+  }
+
+  // Salary status
+  const salary = salaryStatus(txs);
+  if (salary === "pending") {
+    insights.push({
+      tone: "warn",
+      text: "You haven't recorded your salary yet this month.",
+    });
   }
 
   // Net position

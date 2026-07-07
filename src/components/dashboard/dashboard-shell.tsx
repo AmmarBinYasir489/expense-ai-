@@ -6,6 +6,7 @@ import {
   PlusCircle,
   Receipt,
   Sparkles,
+  MessageCircle,
 } from "lucide-react";
 import type { Transaction } from "@/lib/types";
 import { computeTotals, computeInsights } from "@/lib/analytics";
@@ -15,10 +16,12 @@ import ExpenseInput from "@/components/dashboard/expense-input";
 import TransactionList from "@/components/dashboard/transaction-list";
 import SpendingCharts from "@/components/dashboard/spending-charts";
 import Insights from "@/components/dashboard/insights";
+import ChatPanel from "@/components/dashboard/chat-panel";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "add", label: "Add", icon: PlusCircle },
+  { id: "chat", label: "Ask AI", icon: MessageCircle },
   { id: "transactions", label: "History", icon: Receipt },
   { id: "insights", label: "Insights", icon: Sparkles },
 ];
@@ -102,6 +105,17 @@ export default function DashboardShell({
           />
           <div className="mt-4">
             <ExpenseInput />
+          </div>
+        </section>
+
+        {/* Ask AI */}
+        <section id="chat" className="mt-10 animate-in">
+          <SectionTitle
+            title="Ask AI"
+            subtitle="Ask questions about your spending in plain language."
+          />
+          <div className="mt-4">
+            <ChatPanel />
           </div>
         </section>
 
