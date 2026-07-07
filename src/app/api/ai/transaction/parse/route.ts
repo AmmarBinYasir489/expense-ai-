@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/ai/openai";
-import { transactionSchema } from "@/lib/validators/transaction";
+import {
+  parsedTransactionsSchema,
+  normalizeToTransactions,
+} from "@/lib/validators/transaction";
 
 export async function POST(request: Request) {
   const { text } = await request.json();
@@ -18,26 +21,28 @@ export async function POST(request: Request) {
   try {
     response = await openai.chat.completions.create({
       model: "llama-3.1-8b-instant",
-      max_tokens: 500,
+      max_tokens: 900,
       temperature: 0,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: `You are a finance assistant that turns a short natural-language note into a single structured transaction.
+          content: `You are a finance assistant that turns a natural-language note into one or more structured transactions.
 
 Today's date is ${today}.
 
-Rules:
+A single note may contain several transactions (e.g. "Paid 350 for lunch, 1500 on Netflix, and 3000 for books" is THREE separate transactions). Split them into one object each — never merge amounts.
+
+For each transaction:
 - "type" is "income" for money received (salary, refund, sold, got paid) and "expense" for money spent.
 - "amount" is a positive number only (no currency symbols).
-- "category" is a short Title Case label (e.g. Food, Transport, Shopping, Rent, Salary, Utilities, Health, Entertainment).
-- "description" is a brief human-readable summary of the note.
+- "category": decide this yourself from the meaning of the sentence. Categorize by what the amount was actually paid FOR (the action or thing the money bought), not by unrelated nouns in the sentence. For example, if the payment is a cab/ride fare to reach a place, it is transport even if the destination is a food spot. Use a concise, natural Title Case label of your own choosing — there is no fixed list.
+- "description" is a brief human-readable summary of that item.
 - "date" is YYYY-MM-DD; if the note says "today" or gives no date, use ${today}. Resolve "yesterday" relative to today.
-- "confidence" is between 0 and 1 reflecting how sure you are.
+- "confidence" is between 0 and 1.
 
 Return ONLY this JSON object and nothing else:
-{"type":"expense|income","amount":number,"category":"string","description":"string","date":"YYYY-MM-DD","confidence":number}`,
+{"transactions":[{"type":"expense|income","amount":number,"category":"string","description":"string","date":"YYYY-MM-DD","confidence":number}]}`,
         },
         { role: "user", content: text },
       ],
@@ -50,9 +55,9 @@ Return ONLY this JSON object and nothing else:
     );
   }
 
-  let result: unknown;
+  let raw: unknown;
   try {
-    result = JSON.parse(response.choices[0].message.content || "{}");
+    raw = JSON.parse(response.choices[0].message.content || "{}");
   } catch {
     return NextResponse.json(
       { error: "AI returned an unreadable response. Try rephrasing." },
@@ -60,7 +65,9 @@ Return ONLY this JSON object and nothing else:
     );
   }
 
-  const validated = transactionSchema.safeParse(result);
+  const validated = parsedTransactionsSchema.safeParse(
+    normalizeToTransactions(raw)
+  );
 
   if (!validated.success) {
     return NextResponse.json(

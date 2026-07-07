@@ -35,28 +35,36 @@ export default function ExpenseInput() {
         body: JSON.stringify({ text }),
       });
 
-      const transaction = await aiResponse.json();
+      const parsed = await aiResponse.json();
 
       if (!aiResponse.ok) {
         setFeedback({
           type: "error",
-          text: transaction.error || "AI couldn't understand that. Try again.",
+          text: parsed.error || "AI couldn't understand that. Try again.",
         });
         return;
       }
 
+      const items: { category: string }[] = parsed.transactions ?? [];
+
       const saveResponse = await fetch("/api/transactions/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transaction),
+        body: JSON.stringify(parsed),
       });
 
       const saved = await saveResponse.json();
 
       if (saveResponse.ok) {
+        const count = saved.count ?? items.length;
         setFeedback({
           type: "success",
-          text: `Saved: ${transaction.category} · ${transaction.amount}`,
+          text:
+            count > 1
+              ? `Saved ${count} transactions: ${items
+                  .map((i) => i.category)
+                  .join(", ")}`
+              : `Saved: ${items[0]?.category ?? "transaction"}`,
         });
         setText("");
         router.refresh();
