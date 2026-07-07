@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { LogOut } from "lucide-react";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -16,9 +17,11 @@ export default function LogoutButton() {
   return (
     <button
       onClick={logout}
-      className="rounded-xl bg-red-500 px-5 py-3 font-medium text-white transition hover:bg-red-600"
+      aria-label="Log out"
+      className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-muted transition hover:border-danger hover:text-danger"
     >
-      Logout
+      <LogOut size={16} />
+      <span className="hidden sm:inline">Logout</span>
     </button>
   );
 }

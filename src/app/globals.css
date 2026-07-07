@@ -1,26 +1,72 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0f14;
+  --surface: #141b24;
+  --surface-2: #1b2530;
+  --border: #26313d;
+  --foreground: #e6edf3;
+  --muted: #8b98a9;
+  --accent: #4ade80;
+  --accent-2: #a78bfa;
+  --accent-3: #38bdf8;
+  --accent-4: #fbbf24;
+  --danger: #fb7185;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-accent-4: var(--accent-4);
+  --color-danger: var(--danger);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Thin custom scrollbars to match the dark theme */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fade-in-up 0.35s ease both;
+}
+
+/* Smooth anchor scrolling for the mobile tab bar, offset for sticky header */
+html {
+  scroll-behavior: smooth;
+}
+
+section[id] {
+  scroll-margin-top: 84px;
 }

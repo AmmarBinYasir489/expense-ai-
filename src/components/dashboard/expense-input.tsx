@@ -2,156 +2,130 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Sparkles, Loader2 } from "lucide-react";
 
+type Feedback = { type: "success" | "error"; text: string } | null;
+
+const EXAMPLES = [
+  "Bought coffee for 500 today",
+  "Paid 12000 rent",
+  "Got 50000 salary",
+  "Uber ride 850",
+];
 
 export default function ExpenseInput() {
-
   const router = useRouter();
-
   const [text, setText] = useState("");
-
   const [loading, setLoading] = useState(false);
-
+  const [feedback, setFeedback] = useState<Feedback>(null);
 
   async function submitExpense() {
-
     if (!text.trim()) {
-      alert("Please enter an expense");
+      setFeedback({ type: "error", text: "Please enter an expense." });
       return;
     }
 
-
     try {
-
       setLoading(true);
+      setFeedback(null);
 
+      const aiResponse = await fetch("/api/ai/transaction/parse", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
 
-      const aiResponse = await fetch(
-        "/api/ai/transaction/parse",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            text,
-          }),
-        }
-      );
-
-
-      const transaction =
-        await aiResponse.json();
-
+      const transaction = await aiResponse.json();
 
       if (!aiResponse.ok) {
-
-        alert(transaction.error || "AI parsing failed");
-
+        setFeedback({
+          type: "error",
+          text: transaction.error || "AI couldn't understand that. Try again.",
+        });
         return;
       }
 
+      const saveResponse = await fetch("/api/transactions/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(transaction),
+      });
 
-
-      const saveResponse =
-        await fetch(
-          "/api/transactions/create",
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type": "application/json",
-            },
-
-            body: JSON.stringify(transaction),
-          }
-        );
-
-
-
-      const saved =
-        await saveResponse.json();
-
-
+      const saved = await saveResponse.json();
 
       if (saveResponse.ok) {
-
-        alert("Expense saved!");
-
+        setFeedback({
+          type: "success",
+          text: `Saved: ${transaction.category} · ${transaction.amount}`,
+        });
         setText("");
-
-        // Refresh dashboard server components
         router.refresh();
-
       } else {
-
-        alert(saved.error || "Saving failed");
-
+        setFeedback({ type: "error", text: saved.error || "Saving failed." });
       }
-
-
     } catch (error) {
-
       console.error(error);
-
-      alert("Something went wrong");
-
+      setFeedback({ type: "error", text: "Something went wrong." });
     } finally {
-
       setLoading(false);
-
     }
-
   }
 
-
-
   return (
-
-    <div className="bg-white rounded-2xl shadow p-6">
-
-      <h2 className="text-xl font-semibold mb-4">
-        Add Expense
-      </h2>
-
-
+    <div className="rounded-3xl border border-border bg-surface p-5 sm:p-6">
       <textarea
-
         value={text}
-
         onChange={(e) => setText(e.target.value)}
-
-        placeholder="Example: Bought coffee for 500 today"
-
-        className="w-full rounded-xl border p-4"
-
-        rows={4}
-
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === "Enter") submitExpense();
+        }}
+        placeholder="e.g. Bought coffee for 500 today"
+        className="w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-foreground outline-none transition placeholder:text-muted focus:border-accent focus:ring-4 focus:ring-accent/15"
+        rows={3}
       />
 
+      <div className="mt-3 flex flex-wrap gap-2">
+        {EXAMPLES.map((ex) => (
+          <button
+            key={ex}
+            type="button"
+            onClick={() => setText(ex)}
+            className="rounded-full border border-border px-3 py-1 text-xs text-muted transition hover:border-accent hover:text-foreground"
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+
+      {feedback && (
+        <p
+          className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${
+            feedback.type === "success"
+              ? "bg-accent/10 text-accent"
+              : "bg-danger/10 text-danger"
+          }`}
+        >
+          {feedback.text}
+        </p>
+      )}
 
       <button
-
         onClick={submitExpense}
-
         disabled={loading}
-
-        className="mt-4 rounded-xl bg-indigo-600 px-6 py-3 text-white disabled:opacity-50"
-
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-3 font-semibold text-background transition hover:brightness-110 disabled:opacity-60 sm:w-auto sm:px-8"
       >
-
-        {loading
-          ? "Processing..."
-          : "Add Expense"
-        }
-
+        {loading ? (
+          <>
+            <Loader2 size={18} className="animate-spin" />
+            Processing…
+          </>
+        ) : (
+          <>
+            <Sparkles size={18} />
+            Add with AI
+          </>
+        )}
       </button>
-
-
     </div>
-
   );
 }
-
