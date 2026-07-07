@@ -4,6 +4,7 @@ import {
   parsedTransactionsSchema,
   normalizeToTransactions,
 } from "@/lib/validators/transaction";
+import { normalizeCategory } from "@/lib/categories";
 
 export async function POST(request: Request) {
   const { text } = await request.json();
@@ -76,5 +77,11 @@ Return ONLY this JSON object and nothing else:
     );
   }
 
-  return NextResponse.json(validated.data);
+  // Collapse synonymous categories to a canonical label so charts stay clean.
+  const transactions = validated.data.transactions.map((t) => ({
+    ...t,
+    category: normalizeCategory(t.category),
+  }));
+
+  return NextResponse.json({ transactions });
 }

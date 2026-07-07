@@ -4,6 +4,7 @@ import {
   parsedTransactionsSchema,
   normalizeToTransactions,
 } from "@/lib/validators/transaction";
+import { normalizeCategory } from "@/lib/categories";
 
 export async function POST(request: Request) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       user_id: user.id,
       type: t.type,
       amount: t.amount,
-      category: t.category,
+      category: normalizeCategory(t.category),
       description: t.description,
       date: t.date,
       confidence: t.confidence,
