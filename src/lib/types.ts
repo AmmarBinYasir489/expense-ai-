@@ -4,6 +4,7 @@ export type Transaction = {
   type: "expense" | "income";
   amount: number;
   category: string;
+  currency: string | null;
   description: string | null;
   date: string | null;
   confidence: number | null;

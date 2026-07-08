@@ -7,8 +7,10 @@ import { formatMoney } from "@/lib/format";
 
 export default function SpendingCharts({
   transactions,
+  currency,
 }: {
   transactions: Transaction[];
+  currency: string;
 }) {
   const categories = useMemo(
     () => byCategory(transactions).slice(0, 6),
@@ -39,7 +41,9 @@ export default function SpendingCharts({
                   <span className="flex-1 truncate text-muted">
                     {c.category}
                   </span>
-                  <span className="font-medium">{formatMoney(c.total)}</span>
+                  <span className="font-medium">
+                    {formatMoney(c.total, currency)}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -53,7 +57,7 @@ export default function SpendingCharts({
       <div className="rounded-3xl border border-border bg-surface p-5">
         <h3 className="font-semibold">Last 6 months</h3>
         {hasData ? (
-          <Bars months={months} />
+          <Bars months={months} currency={currency} />
         ) : (
           <Empty />
         )}
@@ -102,7 +106,13 @@ function Donut({ slices }: { slices: { category: string; total: number }[] }) {
   );
 }
 
-function Bars({ months }: { months: { label: string; total: number }[] }) {
+function Bars({
+  months,
+  currency,
+}: {
+  months: { label: string; total: number }[];
+  currency: string;
+}) {
   const max = Math.max(...months.map((m) => m.total), 1);
   return (
     <div className="mt-6 flex h-40 items-end justify-between gap-2">
@@ -117,7 +127,7 @@ function Bars({ months }: { months: { label: string; total: number }[] }) {
               <div
                 className="w-full rounded-t-lg bg-accent/80 transition-all"
                 style={{ height: `${Math.max(pct, 2)}%` }}
-                title={formatMoney(m.total)}
+                title={formatMoney(m.total, currency)}
               />
             </div>
             <span className="text-xs text-muted">{m.label}</span>

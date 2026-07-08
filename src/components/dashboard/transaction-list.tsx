@@ -8,8 +8,10 @@ import { formatSigned } from "@/lib/format";
 
 export default function TransactionList({
   transactions,
+  currency,
 }: {
   transactions: Transaction[];
+  currency: string;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -116,7 +118,7 @@ export default function TransactionList({
                   t.type === "income" ? "text-accent" : "text-foreground"
                 }`}
               >
-                {formatSigned(Number(t.amount), t.type)}
+                {formatSigned(Number(t.amount), t.type, t.currency || currency)}
               </p>
 
               <button

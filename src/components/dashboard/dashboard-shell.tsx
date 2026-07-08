@@ -1,16 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   LayoutDashboard,
   PlusCircle,
   Receipt,
   Sparkles,
   MessageCircle,
+  Settings,
 } from "lucide-react";
 import type { Transaction } from "@/lib/types";
 import { computeTotals, computeInsights } from "@/lib/analytics";
 import { formatMoney } from "@/lib/format";
+import { firstName } from "@/lib/profile";
 import LogoutButton from "@/components/auth/logout-button";
 import ExpenseInput from "@/components/dashboard/expense-input";
 import TransactionList from "@/components/dashboard/transaction-list";
@@ -28,14 +31,19 @@ const TABS = [
 
 export default function DashboardShell({
   email,
+  name,
+  currency,
   transactions,
 }: {
   email: string;
+  name: string;
+  currency: string;
   transactions: Transaction[];
 }) {
   const [active, setActive] = useState("overview");
   const totals = computeTotals(transactions);
-  const insights = computeInsights(transactions);
+  const insights = computeInsights(transactions, currency);
+  const greetingName = firstName(name);
 
   function go(id: string) {
     setActive(id);
@@ -73,10 +81,18 @@ export default function DashboardShell({
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
-            <span className="hidden max-w-[12rem] truncate text-sm text-muted sm:inline">
-              {email}
+          <div className="flex items-center gap-2">
+            <span className="hidden text-sm text-muted lg:inline">
+              Hi, <span className="text-foreground">{greetingName}</span>
             </span>
+            <Link
+              href="/settings"
+              aria-label="Settings"
+              title="Settings"
+              className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted transition hover:border-accent hover:text-foreground"
+            >
+              <Settings size={16} />
+            </Link>
             <LogoutButton />
           </div>
         </div>
@@ -87,13 +103,15 @@ export default function DashboardShell({
         {/* Overview */}
         <section id="overview" className="animate-in">
           <BalanceHero
+            greeting={`Welcome back, ${greetingName}`}
             balance={totals.balance}
             income={totals.income}
             expense={totals.expense}
             thisMonth={totals.thisMonthExpense}
+            currency={currency}
           />
           <div className="mt-6">
-            <SpendingCharts transactions={transactions} />
+            <SpendingCharts transactions={transactions} currency={currency} />
           </div>
         </section>
 
@@ -101,10 +119,10 @@ export default function DashboardShell({
         <section id="add" className="mt-10 animate-in">
           <SectionTitle
             title="Add an expense"
-            subtitle="Type it naturally — AI figures out the rest."
+            subtitle={`Ready to track today's expenses, ${greetingName}? Just type them.`}
           />
           <div className="mt-4">
-            <ExpenseInput />
+            <ExpenseInput name={greetingName} currency={currency} />
           </div>
         </section>
 
@@ -115,7 +133,7 @@ export default function DashboardShell({
             subtitle="Ask questions about your spending in plain language."
           />
           <div className="mt-4">
-            <ChatPanel />
+            <ChatPanel name={greetingName} />
           </div>
         </section>
 
@@ -126,7 +144,7 @@ export default function DashboardShell({
             subtitle={`${transactions.length} recorded`}
           />
           <div className="mt-4">
-            <TransactionList transactions={transactions} />
+            <TransactionList transactions={transactions} currency={currency} />
           </div>
         </section>
 
@@ -168,15 +186,19 @@ export default function DashboardShell({
 }
 
 function BalanceHero({
+  greeting,
   balance,
   income,
   expense,
   thisMonth,
+  currency,
 }: {
+  greeting: string;
   balance: number;
   income: number;
   expense: number;
   thisMonth: number;
+  currency: string;
 }) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-surface to-surface-2 p-6 sm:p-8">
@@ -184,15 +206,27 @@ function BalanceHero({
         aria-hidden
         className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-accent/15 blur-3xl"
       />
-      <p className="text-sm text-muted">Current balance</p>
+      <p className="text-sm font-medium text-accent">{greeting} 👋</p>
+      <p className="mt-4 text-sm text-muted">Current balance</p>
       <p className="mt-1 text-4xl font-bold tracking-tight sm:text-5xl">
-        {formatMoney(balance)}
+        {formatMoney(balance, currency)}
       </p>
 
       <div className="mt-6 grid grid-cols-3 gap-3">
-        <MiniStat label="Income" value={formatMoney(income)} tone="accent" />
-        <MiniStat label="Expenses" value={formatMoney(expense)} tone="danger" />
-        <MiniStat label="This month" value={formatMoney(thisMonth)} />
+        <MiniStat
+          label="Income"
+          value={formatMoney(income, currency)}
+          tone="accent"
+        />
+        <MiniStat
+          label="Expenses"
+          value={formatMoney(expense, currency)}
+          tone="danger"
+        />
+        <MiniStat
+          label="This month"
+          value={formatMoney(thisMonth, currency)}
+        />
       </div>
     </div>
   );

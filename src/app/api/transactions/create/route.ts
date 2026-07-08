@@ -5,6 +5,7 @@ import {
   normalizeToTransactions,
 } from "@/lib/validators/transaction";
 import { normalizeCategory } from "@/lib/categories";
+import { getProfile, profileDefaults } from "@/lib/profile";
 
 export async function POST(request: Request) {
   try {
@@ -33,11 +34,15 @@ export async function POST(request: Request) {
       );
     }
 
+    const profile = await getProfile(supabase, user.id);
+    const currency = profile?.currency ?? profileDefaults().currency;
+
     const rows = validated.data.transactions.map((t) => ({
       user_id: user.id,
       type: t.type,
       amount: t.amount,
       category: normalizeCategory(t.category),
+      currency,
       description: t.description,
       date: t.date,
       confidence: t.confidence,

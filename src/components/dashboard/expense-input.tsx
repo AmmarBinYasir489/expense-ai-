@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles, Loader2 } from "lucide-react";
+import { formatMoney } from "@/lib/format";
 
 type Feedback = { type: "success" | "error"; text: string } | null;
+
+type ParsedItem = {
+  category: string;
+  amount: number;
+  type: "income" | "expense";
+};
 
 const EXAMPLES = [
   "Bought coffee for 500 today",
@@ -13,7 +20,13 @@ const EXAMPLES = [
   "Uber ride 850",
 ];
 
-export default function ExpenseInput() {
+export default function ExpenseInput({
+  name,
+  currency,
+}: {
+  name: string;
+  currency: string;
+}) {
   const router = useRouter();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,7 +58,7 @@ export default function ExpenseInput() {
         return;
       }
 
-      const items: { category: string }[] = parsed.transactions ?? [];
+      const items: ParsedItem[] = parsed.transactions ?? [];
 
       const saveResponse = await fetch("/api/transactions/create", {
         method: "POST",
@@ -57,15 +70,20 @@ export default function ExpenseInput() {
 
       if (saveResponse.ok) {
         const count = saved.count ?? items.length;
-        setFeedback({
-          type: "success",
-          text:
-            count > 1
-              ? `Saved ${count} transactions: ${items
-                  .map((i) => i.category)
-                  .join(", ")}`
-              : `Saved: ${items[0]?.category ?? "transaction"}`,
-        });
+        let text: string;
+        if (count === 1 && items[0]) {
+          const it = items[0];
+          const kind = it.type === "income" ? "income" : "expense";
+          text = `Great, ${name}! I've saved your ${it.category} ${kind} of ${formatMoney(
+            it.amount,
+            currency
+          )}.`;
+        } else {
+          text = `Great, ${name}! I've saved ${count} transactions: ${items
+            .map((i) => i.category)
+            .join(", ")}.`;
+        }
+        setFeedback({ type: "success", text });
         setText("");
         router.refresh();
       } else {

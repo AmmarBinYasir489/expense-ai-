@@ -1,5 +1,5 @@
 import type { Transaction } from "./types";
-import { formatMoney } from "./format";
+import { formatMoney, DEFAULT_CURRENCY } from "./format";
 
 // Prefer the AI-parsed `date`; fall back to the DB insert time.
 function txDate(t: Transaction): Date {
@@ -144,9 +144,13 @@ function salaryStatus(txs: Transaction[]): "received" | "pending" | "unknown" {
 
 export type Insight = { tone: "good" | "warn" | "info"; text: string };
 
-export function computeInsights(txs: Transaction[]): Insight[] {
+export function computeInsights(
+  txs: Transaction[],
+  currency: string = DEFAULT_CURRENCY
+): Insight[] {
   if (txs.length === 0) return [];
 
+  const fmt = (n: number) => formatMoney(n, currency);
   const totals = computeTotals(txs);
   const cats = byCategory(txs);
   const insights: Insight[] = [];
@@ -184,7 +188,7 @@ export function computeInsights(txs: Transaction[]): Insight[] {
         pct >= 100
           ? `${biggestUp.category} spending ${
               pct >= 100 && pct < 200 ? "doubled" : `is up ${pct}%`
-            } this month (${formatMoney(biggestUp.thisMonth)}).`
+            } this month (${fmt(biggestUp.thisMonth)}).`
           : `You spent ${pct}% more on ${biggestUp.category} this month.`,
     });
   }
@@ -204,7 +208,7 @@ export function computeInsights(txs: Transaction[]): Insight[] {
     const share = Math.round((top.total / totals.expense) * 100);
     insights.push({
       tone: "info",
-      text: `${top.category} accounts for ${share}% of your total spending (${formatMoney(
+      text: `${top.category} accounts for ${share}% of your total spending (${fmt(
         top.total
       )}).`,
     });
@@ -224,12 +228,12 @@ export function computeInsights(txs: Transaction[]): Insight[] {
     if (totals.balance >= 0) {
       insights.push({
         tone: "good",
-        text: `You're net positive by ${formatMoney(totals.balance)} overall.`,
+        text: `You're net positive by ${fmt(totals.balance)} overall.`,
       });
     } else {
       insights.push({
         tone: "warn",
-        text: `You're spending more than you earn by ${formatMoney(
+        text: `You're spending more than you earn by ${fmt(
           Math.abs(totals.balance)
         )}.`,
       });

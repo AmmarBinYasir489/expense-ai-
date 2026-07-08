@@ -5,6 +5,9 @@ import {
   normalizeToTransactions,
 } from "@/lib/validators/transaction";
 import { normalizeCategory } from "@/lib/categories";
+import { createClient } from "@/lib/supabase/server";
+import { getProfile, profileDefaults } from "@/lib/profile";
+import { todayInTimezone } from "@/lib/datetime";
 
 export async function POST(request: Request) {
   const { text } = await request.json();
@@ -16,7 +19,15 @@ export async function POST(request: Request) {
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const profile = user ? await getProfile(supabase, user.id) : null;
+  const { currency, timezone } = profile ?? profileDefaults();
+  const userName = profile?.name ?? "";
+
+  const today = todayInTimezone(timezone);
 
   let response;
   try {
@@ -30,7 +41,13 @@ export async function POST(request: Request) {
           role: "system",
           content: `You are a finance assistant that turns a natural-language note into one or more structured transactions.
 
-Today's date is ${today}.
+User Information
+Name: ${userName || "(unknown)"}
+Default Currency: ${currency}
+Timezone: ${timezone}
+Today's date (in the user's timezone) is ${today}.
+
+Amounts are in the user's default currency (${currency}) unless the note clearly states otherwise; do not convert currencies.
 
 A single note may contain several transactions (e.g. "Paid 350 for lunch, 1500 on Netflix, and 3000 for books" is THREE separate transactions). Split them into one object each — never merge amounts.
 

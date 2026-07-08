@@ -14,7 +14,7 @@ const SUGGESTIONS = [
   "Did I pay the electricity bill?",
 ];
 
-export default function ChatPanel() {
+export default function ChatPanel({ name }: { name: string }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -71,7 +71,7 @@ export default function ChatPanel() {
             <span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent/15 text-accent">
               <Sparkles size={24} />
             </span>
-            <p className="mt-3 font-semibold">Ask about your money</p>
+            <p className="mt-3 font-semibold">Hi {name}, ask about your money</p>
             <p className="mt-1 max-w-xs text-sm text-muted">
               I can read your transactions and answer questions about your
               spending.

@@ -8,7 +8,8 @@ import {
   byMonth,
   categoryMonthChanges,
 } from "@/lib/analytics";
-import { CURRENCY } from "@/lib/format";
+import { getProfile, profileDefaults } from "@/lib/profile";
+import { todayInTimezone } from "@/lib/datetime";
 
 // Groq's flagship model for better reasoning over the data.
 const CHAT_MODEL = "llama-3.3-70b-versatile";
@@ -17,7 +18,11 @@ const MAX_HISTORY = 8; // recent turns kept for context
 
 type ChatMessage = { role: "user" | "assistant"; content: string };
 
-function buildContext(txs: Transaction[]) {
+function buildContext(
+  txs: Transaction[],
+  currency: string,
+  timezone: string
+) {
   const totals = computeTotals(txs);
   const changes = categoryMonthChanges(txs);
   const recent = txs.slice(0, MAX_TX).map((t) => ({
@@ -29,8 +34,8 @@ function buildContext(txs: Transaction[]) {
   }));
 
   return {
-    currency: CURRENCY,
-    today: new Date().toISOString().slice(0, 10),
+    currency,
+    today: todayInTimezone(timezone),
     totals: {
       totalIncome: totals.income,
       totalExpense: totals.expense,
@@ -82,11 +87,21 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  const profile = await getProfile(supabase, user.id);
+  const { currency, timezone } = profile ?? profileDefaults();
+  const userName = profile?.name ?? "";
+
   const txs = (data ?? []) as Transaction[];
-  const context = buildContext(txs);
+  const context = buildContext(txs, currency, timezone);
 
   const system = `You are the in-app financial assistant for a personal expense tracker.
 Answer the user's questions using ONLY the JSON data below about THEIR transactions. Do not invent transactions or numbers.
+
+User Information
+Name: ${userName || "(unknown)"}
+Default Currency: ${currency}
+Timezone: ${timezone}
+Address the user by their first name occasionally and keep a warm, personal tone.
 
 Rules:
 - All amounts are in ${context.currency}. Always include the currency in figures.

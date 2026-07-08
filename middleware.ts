@@ -85,11 +85,12 @@ console.log("MIDDLEWARE RUNNING");
 
 
 
-  if (
-    pathname.startsWith("/dashboard")
-    &&
-    !user
-  ) {
+  const protectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/settings");
+
+  if (protectedRoute && !user) {
 
     return NextResponse.redirect(
 
@@ -133,6 +134,8 @@ export const config = {
 
   matcher: [
     "/dashboard/:path*",
+    "/onboarding",
+    "/settings/:path*",
     "/login",
   ],
 
