@@ -72,8 +72,8 @@ export default function TransactionList({
         </select>
       </div>
 
-      {/* List */}
-      <div className="mt-4 space-y-2">
+      {/* List — capped height so many records scroll instead of growing the page */}
+      <div className="mt-4 max-h-[26rem] space-y-2 overflow-y-auto pr-1">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-12 text-center text-muted">
             <Inbox size={28} />
