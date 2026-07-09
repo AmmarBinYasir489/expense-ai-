@@ -16,6 +16,15 @@ export const parsedTransactionsSchema = z.object({
 
 export type ParsedTransaction = z.infer<typeof transactionSchema>;
 
+// Fields a user can edit on an existing transaction.
+export const transactionEditSchema = z.object({
+  type: z.enum(["expense", "income"]),
+  amount: z.number().positive(),
+  category: z.string().min(1),
+  description: z.string().optional().default(""),
+  date: z.string().min(1),
+});
+
 // Accepts a bare object, a bare array, or the { transactions: [...] } wrapper
 // and normalizes to the wrapper shape before validation.
 export function normalizeToTransactions(raw: unknown): unknown {

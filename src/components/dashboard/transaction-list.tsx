@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Trash2, Loader2, Inbox } from "lucide-react";
+import { Search, Trash2, Loader2, Inbox, Pencil, X } from "lucide-react";
 import type { Transaction } from "@/lib/types";
 import { formatSigned } from "@/lib/format";
 
@@ -17,10 +17,16 @@ export default function TransactionList({
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Transaction | null>(null);
 
   const categories = useMemo(() => {
     return ["all", ...new Set(transactions.map((t) => t.category || "Other"))];
   }, [transactions]);
+
+  const allCategories = useMemo(
+    () => [...new Set(transactions.map((t) => t.category).filter(Boolean))],
+    [transactions]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -122,6 +128,14 @@ export default function TransactionList({
               </p>
 
               <button
+                onClick={() => setEditing(t)}
+                aria-label="Edit transaction"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+              >
+                <Pencil size={15} />
+              </button>
+
+              <button
                 onClick={() => remove(t.id)}
                 disabled={deletingId === t.id}
                 aria-label="Delete transaction"
@@ -136,6 +150,195 @@ export default function TransactionList({
             </div>
           ))
         )}
+      </div>
+
+      {editing && (
+        <EditModal
+          transaction={editing}
+          categories={allCategories}
+          currency={currency}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function EditModal({
+  transaction,
+  categories,
+  currency,
+  onClose,
+  onSaved,
+}: {
+  transaction: Transaction;
+  categories: string[];
+  currency: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [type, setType] = useState<"expense" | "income">(transaction.type);
+  const [amount, setAmount] = useState(String(transaction.amount ?? ""));
+  const [category, setCategory] = useState(transaction.category ?? "");
+  const [description, setDescription] = useState(transaction.description ?? "");
+  const [date, setDate] = useState(
+    (transaction.date ?? transaction.created_at)?.slice(0, 10) ?? ""
+  );
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    if (!category.trim() || !amount || Number(amount) <= 0) {
+      setError("Enter a category and an amount greater than 0.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/transactions/${transaction.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type,
+          amount: Number(amount),
+          category,
+          description,
+          date,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Could not save.");
+        return;
+      }
+      onSaved();
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-3xl border border-border bg-surface p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Edit transaction</h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-8 w-8 place-items-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-foreground"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={save} className="mt-5 space-y-4">
+          {/* Type toggle */}
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-border p-1">
+            {(["expense", "income"] as const).map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setType(opt)}
+                className={`rounded-lg py-2 text-sm font-medium capitalize transition ${
+                  type === opt
+                    ? opt === "income"
+                      ? "bg-accent/15 text-accent"
+                      : "bg-danger/15 text-danger"
+                    : "text-muted hover:text-foreground"
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted">
+                Amount ({currency})
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-xs font-medium text-muted">
+                Date
+              </label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-accent"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted">
+              Category
+            </label>
+            <input
+              list="edit-categories"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-accent"
+            />
+            <datalist id="edit-categories">
+              {categories.map((c) => (
+                <option key={c} value={c} />
+              ))}
+            </datalist>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-muted">
+              Description
+            </label>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full rounded-xl border border-border bg-background px-3 py-2.5 text-sm outline-none transition focus:border-accent"
+            />
+          </div>
+
+          {error && <p className="text-sm text-danger">{error}</p>}
+
+          <div className="flex gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-xl border border-border py-2.5 text-sm font-medium text-muted transition hover:text-foreground"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-accent py-2.5 text-sm font-semibold text-background transition hover:brightness-110 disabled:opacity-60"
+            >
+              {saving && <Loader2 size={16} className="animate-spin" />}
+              Save
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
