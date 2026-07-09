@@ -106,6 +106,12 @@ function Donut({ slices }: { slices: { category: string; total: number }[] }) {
   );
 }
 
+function compact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}k`;
+  return String(Math.round(n));
+}
+
 function Bars({
   months,
   currency,
@@ -115,21 +121,24 @@ function Bars({
 }) {
   const max = Math.max(...months.map((m) => m.total), 1);
   return (
-    <div className="mt-6 flex h-40 items-end justify-between gap-2">
+    <div className="mt-6 flex h-44 items-end justify-between gap-2">
       {months.map((m) => {
         const pct = (m.total / max) * 100;
         return (
           <div
             key={m.label}
-            className="flex flex-1 flex-col items-center gap-2"
+            className="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
           >
-            <div className="flex h-full w-full items-end">
-              <div
-                className="w-full rounded-t-lg bg-accent/80 transition-all"
-                style={{ height: `${Math.max(pct, 2)}%` }}
-                title={formatMoney(m.total, currency)}
-              />
-            </div>
+            <span className="text-[11px] font-medium tabular-nums text-muted">
+              {m.total > 0 ? compact(m.total) : ""}
+            </span>
+            <div
+              className={`w-full rounded-t-lg transition-all ${
+                m.total > 0 ? "bg-accent/80" : "bg-surface-2"
+              }`}
+              style={{ height: `${m.total > 0 ? Math.max(pct, 4) : 4}%` }}
+              title={formatMoney(m.total, currency)}
+            />
             <span className="text-xs text-muted">{m.label}</span>
           </div>
         );

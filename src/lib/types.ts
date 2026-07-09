@@ -1,3 +1,11 @@
+export type Budget = {
+  id: string;
+  user_id: string;
+  category: string;
+  amount: number;
+  created_at: string;
+};
+
 export type Transaction = {
   id: string;
   user_id: string;

@@ -10,14 +10,19 @@ import {
   MessageCircle,
   Settings,
 } from "lucide-react";
-import type { Transaction } from "@/lib/types";
-import { computeTotals, computeInsights } from "@/lib/analytics";
+import type { Transaction, Budget } from "@/lib/types";
+import {
+  computeTotals,
+  computeInsights,
+  computeBudgetInsights,
+} from "@/lib/analytics";
 import { formatMoney } from "@/lib/format";
 import { firstName } from "@/lib/profile";
 import LogoutButton from "@/components/auth/logout-button";
 import ExpenseInput from "@/components/dashboard/expense-input";
 import TransactionList from "@/components/dashboard/transaction-list";
 import SpendingCharts from "@/components/dashboard/spending-charts";
+import Budgets from "@/components/dashboard/budgets";
 import Insights from "@/components/dashboard/insights";
 import ChatPanel from "@/components/dashboard/chat-panel";
 
@@ -34,15 +39,20 @@ export default function DashboardShell({
   name,
   currency,
   transactions,
+  budgets,
 }: {
   email: string;
   name: string;
   currency: string;
   transactions: Transaction[];
+  budgets: Budget[];
 }) {
   const [active, setActive] = useState("overview");
   const totals = computeTotals(transactions);
-  const insights = computeInsights(transactions, currency);
+  const insights = [
+    ...computeBudgetInsights(transactions, budgets, currency),
+    ...computeInsights(transactions, currency),
+  ];
   const greetingName = firstName(name);
 
   function go(id: string) {
@@ -112,6 +122,13 @@ export default function DashboardShell({
           />
           <div className="mt-6">
             <SpendingCharts transactions={transactions} currency={currency} />
+          </div>
+          <div className="mt-6">
+            <Budgets
+              budgets={budgets}
+              transactions={transactions}
+              currency={currency}
+            />
           </div>
         </section>
 

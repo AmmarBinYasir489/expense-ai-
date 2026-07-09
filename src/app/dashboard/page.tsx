@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getProfile, isProfileComplete } from "@/lib/profile";
+import { getBudgets } from "@/lib/budgets";
 import DashboardShell from "@/components/dashboard/dashboard-shell";
 import type { Transaction } from "@/lib/types";
 
@@ -20,11 +21,14 @@ export default async function DashboardPage() {
     redirect("/onboarding");
   }
 
-  const { data } = await supabase
-    .from("transactions")
-    .select("*")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
+  const [{ data }, budgets] = await Promise.all([
+    supabase
+      .from("transactions")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false }),
+    getBudgets(supabase, user.id),
+  ]);
 
   const transactions = (data ?? []) as Transaction[];
 
@@ -34,6 +38,7 @@ export default async function DashboardPage() {
       name={profile!.name}
       currency={profile!.currency || "PKR"}
       transactions={transactions}
+      budgets={budgets}
     />
   );
 }

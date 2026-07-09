@@ -1,4 +1,4 @@
-import type { Transaction } from "./types";
+import type { Transaction, Budget } from "./types";
 import { formatMoney, DEFAULT_CURRENCY } from "./format";
 
 // Prefer the AI-parsed `date`; fall back to the DB insert time.
@@ -236,6 +236,73 @@ export function computeInsights(
         text: `You're spending more than you earn by ${fmt(
           Math.abs(totals.balance)
         )}.`,
+      });
+    }
+  }
+
+  return insights;
+}
+
+export type BudgetProgress = {
+  category: string;
+  limit: number;
+  spent: number;
+  remaining: number;
+  pct: number; // 0..100+ (clamped only for the bar width in UI)
+  status: "ok" | "near" | "over";
+};
+
+// Spend-this-month per category vs. each budget limit.
+export function budgetProgress(
+  txs: Transaction[],
+  budgets: Budget[]
+): BudgetProgress[] {
+  const changes = categoryMonthChanges(txs);
+  const spentByCat = new Map(changes.map((c) => [c.category, c.thisMonth]));
+
+  return budgets
+    .map((b) => {
+      const spent = spentByCat.get(b.category) ?? 0;
+      const limit = Number(b.amount) || 0;
+      const pct = limit > 0 ? (spent / limit) * 100 : 0;
+      const status: BudgetProgress["status"] =
+        pct >= 100 ? "over" : pct >= 80 ? "near" : "ok";
+      return {
+        category: b.category,
+        limit,
+        spent,
+        remaining: limit - spent,
+        pct,
+        status,
+      };
+    })
+    .sort((a, b) => b.pct - a.pct);
+}
+
+export function computeBudgetInsights(
+  txs: Transaction[],
+  budgets: Budget[],
+  currency: string = DEFAULT_CURRENCY
+): Insight[] {
+  if (budgets.length === 0) return [];
+  const fmt = (n: number) => formatMoney(n, currency);
+  const insights: Insight[] = [];
+
+  for (const p of budgetProgress(txs, budgets)) {
+    const pct = Math.round(p.pct);
+    if (p.status === "over") {
+      insights.push({
+        tone: "warn",
+        text: `You're over your ${p.category} budget — ${fmt(
+          p.spent
+        )} of ${fmt(p.limit)} (${pct}%).`,
+      });
+    } else if (p.status === "near") {
+      insights.push({
+        tone: "warn",
+        text: `You've used ${pct}% of your ${p.category} budget (${fmt(
+          p.spent
+        )} of ${fmt(p.limit)}).`,
       });
     }
   }
