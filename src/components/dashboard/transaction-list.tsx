@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, Trash2, Loader2, Inbox, Pencil, X } from "lucide-react";
+import { Search, Trash2, Loader2, Inbox, Pencil, X, Download } from "lucide-react";
 import type { Transaction } from "@/lib/types";
 import { formatSigned } from "@/lib/format";
 
@@ -51,6 +51,33 @@ export default function TransactionList({
     }
   }
 
+  function exportCsv() {
+    const escape = (v: unknown) => {
+      const s = String(v ?? "");
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const header = ["Date", "Type", "Category", "Description", "Amount", "Currency"];
+    const rows = transactions.map((t) => [
+      (t.date ?? t.created_at)?.slice(0, 10),
+      t.type,
+      t.category,
+      t.description ?? "",
+      t.amount,
+      t.currency || currency,
+    ]);
+    const csv =
+      "﻿" +
+      [header, ...rows].map((r) => r.map(escape).join(",")).join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="rounded-3xl border border-border bg-surface p-4 sm:p-5">
       {/* Controls */}
@@ -78,6 +105,16 @@ export default function TransactionList({
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={exportCsv}
+          disabled={transactions.length === 0}
+          title="Export all transactions as CSV"
+          className="flex items-center justify-center gap-2 rounded-xl border border-border bg-background px-3 py-2.5 text-sm font-medium text-muted transition hover:border-accent hover:text-foreground disabled:opacity-50"
+        >
+          <Download size={16} />
+          <span className="sm:hidden md:inline">Export</span>
+        </button>
       </div>
 
       {/* List — capped height so many records scroll instead of growing the page */}
