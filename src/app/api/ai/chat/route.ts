@@ -11,8 +11,8 @@ import {
 import { getProfile, profileDefaults } from "@/lib/profile";
 import { todayInTimezone } from "@/lib/datetime";
 
-// Groq's flagship model for better reasoning over the data.
-const CHAT_MODEL = "llama-3.3-70b-versatile";
+// Gemini model for reasoning over the user's data.
+const CHAT_MODEL = "gemini-2.5-flash";
 const MAX_TX = 250; // cap raw rows sent to the model
 const MAX_HISTORY = 8; // recent turns kept for context
 

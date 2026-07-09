@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   let response;
   try {
     response = await openai.chat.completions.create({
-      model: "llama-3.1-8b-instant",
+      model: "gemini-2.5-flash-lite",
       max_tokens: 900,
       temperature: 0,
       response_format: { type: "json_object" },
