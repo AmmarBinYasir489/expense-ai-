@@ -1,3 +1,17 @@
+export type Loan = {
+  id: string;
+  user_id: string;
+  direction: "lent" | "borrowed";
+  person: string;
+  amount: number;
+  currency: string | null;
+  due_date: string | null;
+  description: string | null;
+  status: "outstanding" | "repaid";
+  repaid_at: string | null;
+  created_at: string;
+};
+
 export type Budget = {
   id: string;
   user_id: string;

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/ai/openai";
+import { createChatCompletion } from "@/lib/ai/openai";
 import { createClient } from "@/lib/supabase/server";
 import type { Transaction } from "@/lib/types";
 import {
@@ -10,7 +10,8 @@ import {
   budgetProgress,
 } from "@/lib/analytics";
 import { getBudgets } from "@/lib/budgets";
-import type { Budget } from "@/lib/types";
+import { getLoans, loanSummary } from "@/lib/loans";
+import type { Budget, Loan } from "@/lib/types";
 import { getProfile, profileDefaults } from "@/lib/profile";
 import { todayInTimezone } from "@/lib/datetime";
 
@@ -24,6 +25,7 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 function buildContext(
   txs: Transaction[],
   budgets: Budget[],
+  loans: Loan[],
   currency: string,
   timezone: string
 ) {
@@ -60,6 +62,17 @@ function buildContext(
     last6MonthsExpense: byMonth(txs, 6),
     thisVsLastMonthByCategory: changes,
     budgets: budgetProgress(txs, budgets),
+    loans: {
+      summary: loanSummary(loans),
+      outstanding: loans
+        .filter((l) => l.status === "outstanding")
+        .map((l) => ({
+          direction: l.direction, // "lent" = they owe you; "borrowed" = you owe them
+          person: l.person,
+          amount: Number(l.amount) || 0,
+          due_date: l.due_date,
+        })),
+    },
     transactionCount: txs.length,
     transactionsTruncated: txs.length > MAX_TX,
     transactions: recent,
@@ -92,15 +105,16 @@ export async function POST(request: Request) {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
-  const [profile, budgets] = await Promise.all([
+  const [profile, budgets, loans] = await Promise.all([
     getProfile(supabase, user.id),
     getBudgets(supabase, user.id),
+    getLoans(supabase, user.id),
   ]);
   const { currency, timezone } = profile ?? profileDefaults();
   const userName = profile?.name ?? "";
 
   const txs = (data ?? []) as Transaction[];
-  const context = buildContext(txs, budgets, currency, timezone);
+  const context = buildContext(txs, budgets, loans, currency, timezone);
 
   const system = `You are the in-app financial assistant for a personal expense tracker.
 Answer the user's questions using ONLY the JSON data below about THEIR transactions. Do not invent transactions or numbers.
@@ -119,6 +133,7 @@ Rules:
   - comparisons/increases between months -> thisVsLastMonthByCategory (has thisMonth, lastMonth, changePct).
   - overall monthly totals -> totals and last6MonthsExpense.
   - budget questions ("how's my food budget", "am I over budget") -> budgets (each has category, limit, spent, remaining, pct, status).
+  - loan/debt questions ("how much do I owe", "who owes me", "does X owe me") -> loans (summary.owedToYou, summary.youOwe; outstanding[] has direction "lent"=they owe the user / "borrowed"=user owes them, person, amount, due_date).
 - Use the raw "transactions" list only for detail lookups (e.g. "show all Netflix payments", "did I pay the electricity bill").
 - Match categories/merchants case-insensitively and by meaning (e.g. "Netflix" may appear under category "Subscriptions" or in a description).
 - Be concise and friendly. Give the final figure directly — do not show calculation steps. Use short sentences or small bullet lists. Round money to whole numbers.
@@ -133,7 +148,7 @@ ${JSON.stringify(context)}`;
 
   let response;
   try {
-    response = await openai.chat.completions.create({
+    response = await createChatCompletion({
       model: CHAT_MODEL,
       temperature: 0.2,
       max_tokens: 600,

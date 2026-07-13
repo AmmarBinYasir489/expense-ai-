@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { openai } from "@/lib/ai/openai";
+import { createChatCompletion } from "@/lib/ai/openai";
 import {
-  parsedTransactionsSchema,
-  normalizeToTransactions,
+  parsedEntriesSchema,
+  normalizeToEntries,
 } from "@/lib/validators/transaction";
 import { normalizeCategory } from "@/lib/categories";
 import { createClient } from "@/lib/supabase/server";
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
   let response;
   try {
-    response = await openai.chat.completions.create({
+    response = await createChatCompletion({
       model: "gemini-2.5-flash-lite",
       max_tokens: 900,
       temperature: 0,
@@ -59,8 +59,15 @@ For each transaction:
 - "date" is YYYY-MM-DD; if the note says "today" or gives no date, use ${today}. Resolve "yesterday" relative to today.
 - "confidence" is between 0 and 1.
 
+LOANS / SPLITTING A BILL:
+If the note involves lending, borrowing, or splitting a shared cost, also output "loans". Rules:
+- When the USER paid a shared bill and someone else will pay them back their share: create a loan with "direction":"lent" for that person and their share as "amount". The user's own EXPENSE "amount" must be the total MINUS everyone else's shares (only the user's own portion). Example: "me and Ali bought groceries for 6000, I paid, Ali will pay me 2000" -> transactions:[{expense, amount:4000, category:"Groceries"...}], loans:[{"direction":"lent","person":"Ali","amount":2000}].
+- When SOMEONE ELSE paid and the USER owes them: create ONLY a "borrowed" loan and leave "transactions" EMPTY — the user did not spend their own money yet, so there is NO expense. Example: "Ali paid 6000 for groceries, I owe him 2000" -> {"transactions":[],"loans":[{"direction":"borrowed","person":"Ali","amount":2000}]}. Never output an expense alongside a borrowed loan for the same payment.
+- For each loan: "person" is the other person's name, "amount" is positive, "description" is a short note (optional).
+- If there is no lending/borrowing/splitting, "loans" is an empty array.
+
 Return ONLY this JSON object and nothing else:
-{"transactions":[{"type":"expense|income","amount":number,"category":"string","description":"string","date":"YYYY-MM-DD","confidence":number}]}`,
+{"transactions":[{"type":"expense|income","amount":number,"category":"string","description":"string","date":"YYYY-MM-DD","confidence":number}],"loans":[{"direction":"lent|borrowed","person":"string","amount":number,"description":"string"}]}`,
         },
         { role: "user", content: text },
       ],
@@ -83,11 +90,13 @@ Return ONLY this JSON object and nothing else:
     );
   }
 
-  const validated = parsedTransactionsSchema.safeParse(
-    normalizeToTransactions(raw)
-  );
+  const validated = parsedEntriesSchema.safeParse(normalizeToEntries(raw));
 
-  if (!validated.success) {
+  if (
+    !validated.success ||
+    (validated.data.transactions.length === 0 &&
+      validated.data.loans.length === 0)
+  ) {
     return NextResponse.json(
       { error: "Couldn't understand that. Try e.g. 'Coffee 500 today'." },
       { status: 400 }
@@ -100,5 +109,5 @@ Return ONLY this JSON object and nothing else:
     category: normalizeCategory(t.category),
   }));
 
-  return NextResponse.json({ transactions });
+  return NextResponse.json({ transactions, loans: validated.data.loans });
 }

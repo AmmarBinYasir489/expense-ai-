@@ -9,8 +9,9 @@ import {
   Sparkles,
   MessageCircle,
   Settings,
+  HandCoins,
 } from "lucide-react";
-import type { Transaction, Budget } from "@/lib/types";
+import type { Transaction, Budget, Loan } from "@/lib/types";
 import {
   computeTotals,
   computeInsights,
@@ -23,12 +24,14 @@ import ExpenseInput from "@/components/dashboard/expense-input";
 import TransactionList from "@/components/dashboard/transaction-list";
 import SpendingCharts from "@/components/dashboard/spending-charts";
 import Budgets from "@/components/dashboard/budgets";
+import Loans from "@/components/dashboard/loans";
 import Insights from "@/components/dashboard/insights";
 import ChatPanel from "@/components/dashboard/chat-panel";
 
 const TABS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "add", label: "Add", icon: PlusCircle },
+  { id: "loans", label: "Loans", icon: HandCoins },
   { id: "chat", label: "Ask AI", icon: MessageCircle },
   { id: "transactions", label: "History", icon: Receipt },
   { id: "insights", label: "Insights", icon: Sparkles },
@@ -40,12 +43,14 @@ export default function DashboardShell({
   currency,
   transactions,
   budgets,
+  loans,
 }: {
   email: string;
   name: string;
   currency: string;
   transactions: Transaction[];
   budgets: Budget[];
+  loans: Loan[];
 }) {
   const [active, setActive] = useState("overview");
   const totals = computeTotals(transactions);
@@ -140,6 +145,17 @@ export default function DashboardShell({
           />
           <div className="mt-4">
             <ExpenseInput name={greetingName} currency={currency} />
+          </div>
+        </section>
+
+        {/* Loans */}
+        <section id="loans" className="mt-10 animate-in">
+          <SectionTitle
+            title="Loans & debts"
+            subtitle="Track money you've lent or borrowed."
+          />
+          <div className="mt-4">
+            <Loans loans={loans} currency={currency} />
           </div>
         </section>
 
