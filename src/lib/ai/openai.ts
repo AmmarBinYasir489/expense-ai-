@@ -1,32 +1,70 @@
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 
-// Google Gemini via its OpenAI-compatible endpoint, so we can keep using the
-// OpenAI SDK unchanged. The model names in the routes are Gemini models
-// (e.g. gemini-2.5-flash / gemini-2.5-flash-lite).
-export const openai = new OpenAI({
+// Gemini client
+const gemini = new OpenAI({
   apiKey: process.env.GEMINI_API_KEY,
   baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
 });
 
-// Gemini's free tier intermittently returns 429/500/503 (transient overload).
-// Retry a couple of times with backoff so these blips don't reach the user.
-export async function createChatCompletion(
+// Groq client
+const groq = new OpenAI({
+  apiKey: process.env.GROQ_API_KEY,
+  baseURL: "https://api.groq.com/openai/v1",
+});
+
+const RETRYABLE_STATUS = new Set([429, 500, 502, 503]);
+
+async function retryRequest(
+  client: OpenAI,
   params: ChatCompletionCreateParamsNonStreaming,
   retries = 2
 ) {
   let lastError: unknown;
+
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await openai.chat.completions.create(params);
+      return await client.chat.completions.create(params);
     } catch (err) {
       lastError = err;
+
       const status = (err as { status?: number })?.status;
-      const retryable =
-        status === 429 || status === 500 || status === 502 || status === 503;
-      if (!retryable || attempt === retries) throw err;
+
+      if (!RETRYABLE_STATUS.has(status ?? 0) || attempt === retries) {
+        throw err;
+      }
+
       await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     }
   }
+
   throw lastError;
+}
+
+export async function createChatCompletion(
+  params: ChatCompletionCreateParamsNonStreaming
+) {
+  try {
+    // Try Gemini first
+    return await retryRequest(gemini, params);
+  } catch (err) {
+    const status = (err as { status?: number })?.status;
+
+    // Only fall back on transient failures
+    if (
+      process.env.GROQ_API_KEY &&
+      RETRYABLE_STATUS.has(status ?? 0)
+    ) {
+      console.warn("Gemini unavailable, falling back to Groq");
+
+      return retryRequest(groq, {
+        ...params,
+
+        // Replace Gemini model with a Groq model
+        model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+      });
+    }
+
+    throw err;
+  }
 }
