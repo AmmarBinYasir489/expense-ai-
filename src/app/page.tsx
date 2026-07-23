@@ -130,6 +130,16 @@ export default async function Home() {
     },
     {
       "@context": "https://schema.org",
+      "@type": "WebSite",
+      name: SITE_NAME,
+      alternateName: "Wallet Expense AI",
+      url: siteUrl,
+      description:
+        "A free web-based AI expense tracker, monthly budget tracker, and personal loan manager.",
+      inLanguage: "en",
+    },
+    {
+      "@context": "https://schema.org",
       "@type": "FAQPage",
       mainEntity: faqs.map((item) => ({
         "@type": "Question",
@@ -441,7 +451,22 @@ export default async function Home() {
             <span className="font-semibold">Expense AI</span>
           </div>
           <p>© {new Date().getFullYear()} Expense AI. All rights reserved.</p>
-          <div className="flex gap-5">
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link
+              href="/ai-expense-tracker"
+              className="hover:text-foreground"
+            >
+              AI tracker
+            </Link>
+            <Link href="/budget-tracker" className="hover:text-foreground">
+              Budgets
+            </Link>
+            <Link
+              href="/personal-loan-tracker"
+              className="hover:text-foreground"
+            >
+              Loans
+            </Link>
             <Link href="/login" className="hover:text-foreground">
               Sign in
             </Link>

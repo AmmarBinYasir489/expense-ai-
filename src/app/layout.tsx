@@ -5,11 +5,11 @@ import { getSiteUrl, SITE_NAME } from "@/lib/site";
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "Expense AI — Smart Expense Tracker & Budget Assistant",
+    default: "Expense AI Tracker — Budget, Spending & Loan Manager",
     template: `%s | ${SITE_NAME}`,
   },
   description:
-    "Track expenses in plain language, organize spending automatically, set monthly budgets, manage personal loans, and get useful AI-powered money insights.",
+    "Free AI expense tracker for recording spending in plain language, monitoring monthly budgets, managing personal loans, and understanding your money.",
   applicationName: SITE_NAME,
   keywords: [
     "AI expense tracker",
@@ -20,6 +20,11 @@ export const metadata: Metadata = {
     "AI budget assistant",
     "loan tracker",
     "expense manager",
+    "free AI expense tracker",
+    "natural language expense tracker",
+    "monthly spending tracker",
+    "personal loan tracker",
+    "debt tracker",
   ],
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,
@@ -29,16 +34,30 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     siteName: SITE_NAME,
-    title: "Expense AI — Track spending by simply describing it",
+    title: "Expense AI Tracker — Understand Your Spending Clearly",
     description:
-      "Turn everyday money notes into organized transactions, budgets, charts, and useful financial insights.",
+      "Record expenses in plain language, track budgets and loans, and understand your spending from one private dashboard.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Expense AI — Smart expense tracking made simple",
+    title: "Expense AI Tracker — Budget and Spending Assistant",
     description:
-      "Track spending in plain language and understand where your money goes.",
+      "Track spending in plain language, follow budgets, and manage personal loans.",
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  verification: process.env.GOOGLE_SITE_VERIFICATION
+    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
+    : undefined,
   category: "finance",
   referrer: "origin-when-cross-origin",
 };
