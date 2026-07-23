@@ -55,9 +55,9 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
-  verification: process.env.GOOGLE_SITE_VERIFICATION
-    ? { google: process.env.GOOGLE_SITE_VERIFICATION }
-    : undefined,
+  verification: {
+    google: "PeAEtV8xuT8PrHbnj-IUL2etISuYft0L7kS5uHZQq1I",
+  },
   category: "finance",
   referrer: "origin-when-cross-origin",
 };
