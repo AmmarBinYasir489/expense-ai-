@@ -36,6 +36,23 @@ export default function SeoFeaturePage({
             </span>
             Expense AI
           </Link>
+          <nav
+            aria-label="Main navigation"
+            className="hidden items-center gap-6 text-sm text-muted lg:flex"
+          >
+            <Link href="/ai-expense-tracker" className="landing-nav-link">
+              AI tracker
+            </Link>
+            <Link href="/budget-tracker" className="landing-nav-link">
+              Budgets
+            </Link>
+            <Link
+              href="/personal-loan-tracker"
+              className="landing-nav-link"
+            >
+              Loans
+            </Link>
+          </nav>
           <div className="flex items-center gap-2">
             <Link
               href="/login"

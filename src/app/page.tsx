@@ -454,14 +454,14 @@ export default async function Home() {
       </section>
 
       <footer className="border-t border-border">
-        <div className="landing-container flex flex-col items-center gap-6 py-10 text-center text-sm text-muted">
-          <div className="flex items-center gap-2.5 text-foreground">
+        <div className="landing-container grid grid-cols-[1fr_auto] gap-x-8 gap-y-8 py-10 text-sm text-muted">
+          <div className="flex items-start gap-2.5 text-foreground">
             <BrandMark />
             <span className="font-semibold">Expense AI</span>
           </div>
           <nav
             aria-label="Footer navigation"
-            className="flex flex-col items-center gap-3"
+            className="flex flex-col items-end gap-3 text-right"
           >
             <Link
               href="/ai-expense-tracker"
@@ -485,7 +485,9 @@ export default async function Home() {
               Create account
             </Link>
           </nav>
-          <p>© {new Date().getFullYear()} Expense AI. All rights reserved.</p>
+          <p className="col-span-2 border-t border-border pt-6 text-center">
+            © {new Date().getFullYear()} Expense AI. All rights reserved.
+          </p>
         </div>
       </footer>
     </main>
