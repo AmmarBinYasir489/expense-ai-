@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   HandCoins,
@@ -59,6 +59,40 @@ export default function DashboardShell({
     ...computeInsights(transactions, currency, timezone),
   ];
   const greetingName = firstName(name);
+
+  useEffect(() => {
+    let animationFrame = 0;
+
+    function updateActiveSection() {
+      cancelAnimationFrame(animationFrame);
+      animationFrame = requestAnimationFrame(() => {
+        const focusLine =
+          window.scrollY + Math.min(window.innerHeight * 0.35, 280);
+        const nearPageEnd =
+          window.innerHeight + window.scrollY >=
+          document.documentElement.scrollHeight - 8;
+        let current = TABS[0].id;
+
+        for (const tab of TABS) {
+          const section = document.getElementById(tab.id);
+          if (section && section.offsetTop <= focusLine) current = tab.id;
+        }
+
+        if (nearPageEnd) current = TABS[TABS.length - 1].id;
+        setActive((previous) => (previous === current ? previous : current));
+      });
+    }
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
+  }, []);
 
   function go(id: string) {
     setActive(id);
@@ -136,8 +170,8 @@ export default function DashboardShell({
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px] px-4 pb-28 pt-5 sm:px-6 sm:pt-6 lg:px-8 lg:pb-12 xl:px-10">
-          <section id="overview" className="animate-in">
+        <main className="mx-auto w-full max-w-[1440px] px-4 pb-28 pt-5 sm:px-6 sm:pt-6 lg:px-8 lg:pb-12 xl:px-10">
+          <section id="overview" className="max-w-[1280px] animate-in">
             <BalanceOverview
               balance={totals.balance}
               income={totals.income}
@@ -164,7 +198,10 @@ export default function DashboardShell({
             </div>
           </section>
 
-          <section id="add" className="mt-8 animate-in lg:mt-10">
+          <section
+            id="add"
+            className="mt-8 max-w-4xl animate-in lg:mt-10"
+          >
             <SectionTitle
               title="Add an expense"
               subtitle={`Ready to track today's expenses, ${greetingName}? Just type them.`}
@@ -174,7 +211,10 @@ export default function DashboardShell({
             </div>
           </section>
 
-          <section id="loans" className="mt-8 animate-in lg:mt-10">
+          <section
+            id="loans"
+            className="mt-8 max-w-5xl animate-in lg:mt-10"
+          >
             <SectionTitle
               title="Loans & debts"
               subtitle="Track money you've lent or borrowed."
@@ -184,7 +224,10 @@ export default function DashboardShell({
             </div>
           </section>
 
-          <section id="chat" className="mt-8 animate-in lg:mt-10">
+          <section
+            id="chat"
+            className="mt-8 max-w-4xl animate-in lg:mt-10"
+          >
             <SectionTitle
               title="Ask AI"
               subtitle="Ask questions about your spending in plain language."
@@ -194,7 +237,10 @@ export default function DashboardShell({
             </div>
           </section>
 
-          <section id="transactions" className="mt-8 animate-in lg:mt-10">
+          <section
+            id="transactions"
+            className="mt-8 max-w-[1280px] animate-in lg:mt-10"
+          >
             <SectionTitle
               title="Transactions"
               subtitle={`${transactions.length} recorded`}
@@ -207,7 +253,10 @@ export default function DashboardShell({
             </div>
           </section>
 
-          <section id="insights" className="mt-8 animate-in lg:mt-10">
+          <section
+            id="insights"
+            className="mt-8 max-w-5xl animate-in lg:mt-10"
+          >
             <SectionTitle
               title="AI Insights"
               subtitle="Automatic tips based on your spending."
