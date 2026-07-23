@@ -170,8 +170,17 @@ export default async function Home() {
 
           <nav
             aria-label="Main navigation"
-            className="hidden items-center gap-7 text-sm text-muted md:flex"
+            className="hidden items-center gap-5 text-sm text-muted xl:flex"
           >
+            <Link href="/ai-expense-tracker" className="landing-nav-link">
+              AI tracker
+            </Link>
+            <Link href="/budget-tracker" className="landing-nav-link">
+              Budgets
+            </Link>
+            <Link href="/personal-loan-tracker" className="landing-nav-link">
+              Loans
+            </Link>
             <a href="#how-it-works" className="landing-nav-link">
               How it works
             </a>
@@ -445,13 +454,15 @@ export default async function Home() {
       </section>
 
       <footer className="border-t border-border">
-        <div className="landing-container flex flex-col gap-6 py-9 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
+        <div className="landing-container flex flex-col items-center gap-6 py-10 text-center text-sm text-muted">
           <div className="flex items-center gap-2.5 text-foreground">
             <BrandMark />
             <span className="font-semibold">Expense AI</span>
           </div>
-          <p>© {new Date().getFullYear()} Expense AI. All rights reserved.</p>
-          <div className="flex flex-wrap gap-x-5 gap-y-2">
+          <nav
+            aria-label="Footer navigation"
+            className="flex flex-col items-center gap-3"
+          >
             <Link
               href="/ai-expense-tracker"
               className="hover:text-foreground"
@@ -473,7 +484,8 @@ export default async function Home() {
             <Link href="/signup" className="hover:text-foreground">
               Create account
             </Link>
-          </div>
+          </nav>
+          <p>© {new Date().getFullYear()} Expense AI. All rights reserved.</p>
         </div>
       </footer>
     </main>
