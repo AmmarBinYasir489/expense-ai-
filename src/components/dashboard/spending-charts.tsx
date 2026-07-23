@@ -8,15 +8,20 @@ import { formatMoney } from "@/lib/format";
 export default function SpendingCharts({
   transactions,
   currency,
+  timezone,
 }: {
   transactions: Transaction[];
   currency: string;
+  timezone: string;
 }) {
   const categories = useMemo(
     () => byCategory(transactions).slice(0, 6),
     [transactions]
   );
-  const months = useMemo(() => byMonth(transactions, 6), [transactions]);
+  const months = useMemo(
+    () => byMonth(transactions, 6, timezone),
+    [transactions, timezone]
+  );
 
   const hasData = categories.length > 0;
 
@@ -70,7 +75,6 @@ function Donut({ slices }: { slices: { category: string; total: number }[] }) {
   const total = slices.reduce((s, c) => s + c.total, 0);
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
 
   return (
     <svg viewBox="0 0 100 100" className="h-32 w-32 -rotate-90">
@@ -85,7 +89,12 @@ function Donut({ slices }: { slices: { category: string; total: number }[] }) {
       {slices.map((s, i) => {
         const frac = total > 0 ? s.total / total : 0;
         const dash = frac * circumference;
-        const el = (
+        const offset = slices.slice(0, i).reduce((sum, previous) => {
+          const previousFraction = total > 0 ? previous.total / total : 0;
+          return sum + previousFraction * circumference;
+        }, 0);
+
+        return (
           <circle
             key={s.category}
             cx="50"
@@ -99,8 +108,6 @@ function Donut({ slices }: { slices: { category: string; total: number }[] }) {
             strokeLinecap="butt"
           />
         );
-        offset += dash;
-        return el;
       })}
     </svg>
   );

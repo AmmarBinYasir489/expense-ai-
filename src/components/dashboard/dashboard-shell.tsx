@@ -38,25 +38,25 @@ const TABS = [
 ];
 
 export default function DashboardShell({
-  email,
   name,
   currency,
+  timezone,
   transactions,
   budgets,
   loans,
 }: {
-  email: string;
   name: string;
   currency: string;
+  timezone: string;
   transactions: Transaction[];
   budgets: Budget[];
   loans: Loan[];
 }) {
   const [active, setActive] = useState("overview");
-  const totals = computeTotals(transactions);
+  const totals = computeTotals(transactions, timezone);
   const insights = [
-    ...computeBudgetInsights(transactions, budgets, currency),
-    ...computeInsights(transactions, currency),
+    ...computeBudgetInsights(transactions, budgets, currency, timezone),
+    ...computeInsights(transactions, currency, timezone),
   ];
   const greetingName = firstName(name);
 
@@ -126,13 +126,18 @@ export default function DashboardShell({
             currency={currency}
           />
           <div className="mt-6">
-            <SpendingCharts transactions={transactions} currency={currency} />
+            <SpendingCharts
+              transactions={transactions}
+              currency={currency}
+              timezone={timezone}
+            />
           </div>
           <div className="mt-6">
             <Budgets
               budgets={budgets}
               transactions={transactions}
               currency={currency}
+              timezone={timezone}
             />
           </div>
         </section>

@@ -49,7 +49,7 @@ export default function ProfileForm({
   initialTimezone,
 }: Props) {
   const router = useRouter();
-  const zones = useMemo(timezoneOptions, []);
+  const zones = useMemo(() => timezoneOptions(), []);
 
   const [name, setName] = useState(initialName);
   const [currency, setCurrency] = useState(initialCurrency);

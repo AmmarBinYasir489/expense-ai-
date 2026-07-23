@@ -1,21 +1,46 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { getSiteUrl, SITE_NAME } from "@/lib/site";
 
 export const metadata: Metadata = {
-  title: "Expense AI — Smart budget tracking",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "Expense AI — Smart Expense Tracker & Budget Assistant",
+    template: `%s | ${SITE_NAME}`,
+  },
   description:
-    "Track spending in plain language. AI turns 'Bought coffee for 500' into a categorized transaction, with insights and charts.",
+    "Track expenses in plain language, organize spending automatically, set monthly budgets, manage personal loans, and get useful AI-powered money insights.",
+  applicationName: SITE_NAME,
+  keywords: [
+    "AI expense tracker",
+    "expense tracking app",
+    "budget tracker",
+    "personal finance tracker",
+    "spending tracker",
+    "AI budget assistant",
+    "loan tracker",
+    "expense manager",
+  ],
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    siteName: SITE_NAME,
+    title: "Expense AI — Track spending by simply describing it",
+    description:
+      "Turn everyday money notes into organized transactions, budgets, charts, and useful financial insights.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Expense AI — Smart expense tracking made simple",
+    description:
+      "Track spending in plain language and understand where your money goes.",
+  },
+  category: "finance",
+  referrer: "origin-when-cross-origin",
 };
 
 export default function RootLayout({
@@ -24,10 +49,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

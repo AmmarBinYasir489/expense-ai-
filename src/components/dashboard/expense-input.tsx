@@ -200,7 +200,9 @@ export default function ExpenseInput({
       {/* Preview for splits */}
       {pending && (
         <div className="mt-4 rounded-2xl border border-accent/30 bg-accent/5 p-4">
-          <p className="text-sm font-medium">Here's what I understood:</p>
+          <p className="text-sm font-medium">
+            Here&apos;s what I understood:
+          </p>
           <div className="mt-3 space-y-2">
             {pending.transactions.map((t, i) => (
               <PreviewRow

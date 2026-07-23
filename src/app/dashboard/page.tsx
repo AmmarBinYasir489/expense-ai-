@@ -36,9 +36,9 @@ export default async function DashboardPage() {
 
   return (
     <DashboardShell
-      email={user.email ?? ""}
       name={profile!.name}
       currency={profile!.currency || "PKR"}
+      timezone={profile!.timezone || "UTC"}
       transactions={transactions}
       budgets={budgets}
       loans={loans}

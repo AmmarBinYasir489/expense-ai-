@@ -23,7 +23,12 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const profile = user ? await getProfile(supabase, user.id) : null;
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const profile = await getProfile(supabase, user.id);
   const { currency, timezone } = profile ?? profileDefaults();
   const userName = profile?.name ?? "";
 

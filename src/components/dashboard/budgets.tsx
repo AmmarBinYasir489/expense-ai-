@@ -17,15 +17,17 @@ export default function Budgets({
   budgets,
   transactions,
   currency,
+  timezone,
 }: {
   budgets: Budget[];
   transactions: Transaction[];
   currency: string;
+  timezone: string;
 }) {
   const router = useRouter();
   const progress = useMemo(
-    () => budgetProgress(transactions, budgets),
-    [transactions, budgets]
+    () => budgetProgress(transactions, budgets, timezone),
+    [transactions, budgets, timezone]
   );
 
   const categories = useMemo(

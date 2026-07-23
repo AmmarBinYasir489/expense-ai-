@@ -1,17 +1,28 @@
 import OpenAI from "openai";
 import type { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 
-// Gemini client
-const gemini = new OpenAI({
-  apiKey: process.env.GEMINI_API_KEY,
-  baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
-});
+let geminiClient: OpenAI | null = null;
+let groqClient: OpenAI | null = null;
 
-// Groq client
-const groq = new OpenAI({
-  apiKey: process.env.GROQ_API_KEY,
-  baseURL: "https://api.groq.com/openai/v1",
-});
+function getGeminiClient(): OpenAI {
+  if (!geminiClient) {
+    geminiClient = new OpenAI({
+      apiKey: process.env.GEMINI_API_KEY,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    });
+  }
+  return geminiClient;
+}
+
+function getGroqClient(): OpenAI {
+  if (!groqClient) {
+    groqClient = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    });
+  }
+  return groqClient;
+}
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503]);
 
@@ -46,7 +57,7 @@ export async function createChatCompletion(
 ) {
   try {
     // Try Gemini first
-    return await retryRequest(gemini, params);
+    return await retryRequest(getGeminiClient(), params);
   } catch (err) {
     const status = (err as { status?: number })?.status;
 
@@ -57,7 +68,7 @@ export async function createChatCompletion(
     ) {
       console.warn("Gemini unavailable, falling back to Groq");
 
-      return retryRequest(groq, {
+      return retryRequest(getGroqClient(), {
         ...params,
 
         // Replace Gemini model with a Groq model

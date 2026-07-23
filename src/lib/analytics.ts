@@ -1,13 +1,37 @@
 import type { Transaction, Budget } from "./types";
 import { formatMoney, DEFAULT_CURRENCY } from "./format";
 
-// Prefer the AI-parsed `date`; fall back to the DB insert time.
-function txDate(t: Transaction): Date {
-  return new Date(t.date ?? t.created_at);
+function monthKeyInTimezone(date: Date, timeZone: string): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    if (year && month) return `${year}-${month}`;
+  } catch {
+    // Fall through to UTC if the saved timezone is no longer supported.
+  }
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(
+    2,
+    "0"
+  )}`;
 }
 
-function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+function txMonthKey(t: Transaction, timeZone: string): string {
+  if (t.date && /^\d{4}-\d{2}/.test(t.date)) return t.date.slice(0, 7);
+  return monthKeyInTimezone(new Date(t.created_at), timeZone);
+}
+
+function adjacentMonthKey(monthKey: string, offset: number): string {
+  const [year, month] = monthKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(
+    2,
+    "0"
+  )}`;
 }
 
 export type Totals = {
@@ -18,10 +42,12 @@ export type Totals = {
   lastMonthExpense: number;
 };
 
-export function computeTotals(txs: Transaction[]): Totals {
-  const now = new Date();
-  const thisKey = monthKey(now);
-  const lastKey = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+export function computeTotals(
+  txs: Transaction[],
+  timeZone = "UTC"
+): Totals {
+  const thisKey = monthKeyInTimezone(new Date(), timeZone);
+  const lastKey = adjacentMonthKey(thisKey, -1);
 
   let income = 0;
   let expense = 0;
@@ -33,7 +59,7 @@ export function computeTotals(txs: Transaction[]): Totals {
     if (t.type === "income") income += amt;
     else {
       expense += amt;
-      const key = monthKey(txDate(t));
+      const key = txMonthKey(t, timeZone);
       if (key === thisKey) thisMonthExpense += amt;
       else if (key === lastKey) lastMonthExpense += amt;
     }
@@ -64,23 +90,32 @@ export function byCategory(txs: Transaction[]): CategorySlice[] {
 
 export type MonthBar = { label: string; total: number };
 
-export function byMonth(txs: Transaction[], months = 6): MonthBar[] {
-  const now = new Date();
+export function byMonth(
+  txs: Transaction[],
+  months = 6,
+  timeZone = "UTC"
+): MonthBar[] {
+  const thisKey = monthKeyInTimezone(new Date(), timeZone);
   const buckets: MonthBar[] = [];
   const index = new Map<string, number>();
 
   for (let i = months - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    index.set(monthKey(d), buckets.length);
+    const key = adjacentMonthKey(thisKey, -i);
+    const [year, month] = key.split("-").map(Number);
+    const date = new Date(Date.UTC(year, month - 1, 1));
+    index.set(key, buckets.length);
     buckets.push({
-      label: d.toLocaleDateString("en-US", { month: "short" }),
+      label: date.toLocaleDateString("en-US", {
+        month: "short",
+        timeZone: "UTC",
+      }),
       total: 0,
     });
   }
 
   for (const t of txs) {
     if (t.type !== "expense") continue;
-    const pos = index.get(monthKey(txDate(t)));
+    const pos = index.get(txMonthKey(t, timeZone));
     if (pos !== undefined) buckets[pos].total += Number(t.amount) || 0;
   }
 
@@ -95,15 +130,17 @@ export type CategoryChange = {
 };
 
 // This-month vs last-month expense per category, sorted by largest increase.
-export function categoryMonthChanges(txs: Transaction[]): CategoryChange[] {
-  const now = new Date();
-  const thisKey = monthKey(now);
-  const lastKey = monthKey(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+export function categoryMonthChanges(
+  txs: Transaction[],
+  timeZone = "UTC"
+): CategoryChange[] {
+  const thisKey = monthKeyInTimezone(new Date(), timeZone);
+  const lastKey = adjacentMonthKey(thisKey, -1);
 
   const map = new Map<string, { thisMonth: number; lastMonth: number }>();
   for (const t of txs) {
     if (t.type !== "expense") continue;
-    const key = monthKey(txDate(t));
+    const key = txMonthKey(t, timeZone);
     if (key !== thisKey && key !== lastKey) continue;
     const cat = t.category || "Other";
     const entry = map.get(cat) ?? { thisMonth: 0, lastMonth: 0 };
@@ -126,15 +163,17 @@ export function categoryMonthChanges(txs: Transaction[]): CategoryChange[] {
 }
 
 // Whether income categorized as salary landed this month vs. previous months.
-function salaryStatus(txs: Transaction[]): "received" | "pending" | "unknown" {
-  const now = new Date();
-  const thisKey = monthKey(now);
+function salaryStatus(
+  txs: Transaction[],
+  timeZone: string
+): "received" | "pending" | "unknown" {
+  const thisKey = monthKeyInTimezone(new Date(), timeZone);
   let hadSalaryBefore = false;
   let salaryThisMonth = false;
   for (const t of txs) {
     if (t.type !== "income") continue;
     if (!/salary|payroll|wage|paycheck/i.test(t.category)) continue;
-    if (monthKey(txDate(t)) === thisKey) salaryThisMonth = true;
+    if (txMonthKey(t, timeZone) === thisKey) salaryThisMonth = true;
     else hadSalaryBefore = true;
   }
   if (salaryThisMonth) return "received";
@@ -146,12 +185,13 @@ export type Insight = { tone: "good" | "warn" | "info"; text: string };
 
 export function computeInsights(
   txs: Transaction[],
-  currency: string = DEFAULT_CURRENCY
+  currency: string = DEFAULT_CURRENCY,
+  timeZone = "UTC"
 ): Insight[] {
   if (txs.length === 0) return [];
 
   const fmt = (n: number) => formatMoney(n, currency);
-  const totals = computeTotals(txs);
+  const totals = computeTotals(txs, timeZone);
   const cats = byCategory(txs);
   const insights: Insight[] = [];
 
@@ -176,7 +216,7 @@ export function computeInsights(
   }
 
   // Biggest per-category swing this month vs last month
-  const changes = categoryMonthChanges(txs).filter(
+  const changes = categoryMonthChanges(txs, timeZone).filter(
     (c) => c.changePct !== null && Math.abs(c.changePct) >= 15
   );
   const biggestUp = changes[0];
@@ -215,7 +255,7 @@ export function computeInsights(
   }
 
   // Salary status
-  const salary = salaryStatus(txs);
+  const salary = salaryStatus(txs, timeZone);
   if (salary === "pending") {
     insights.push({
       tone: "warn",
@@ -255,9 +295,10 @@ export type BudgetProgress = {
 // Spend-this-month per category vs. each budget limit.
 export function budgetProgress(
   txs: Transaction[],
-  budgets: Budget[]
+  budgets: Budget[],
+  timeZone = "UTC"
 ): BudgetProgress[] {
-  const changes = categoryMonthChanges(txs);
+  const changes = categoryMonthChanges(txs, timeZone);
   const spentByCat = new Map(changes.map((c) => [c.category, c.thisMonth]));
 
   return budgets
@@ -282,13 +323,14 @@ export function budgetProgress(
 export function computeBudgetInsights(
   txs: Transaction[],
   budgets: Budget[],
-  currency: string = DEFAULT_CURRENCY
+  currency: string = DEFAULT_CURRENCY,
+  timeZone = "UTC"
 ): Insight[] {
   if (budgets.length === 0) return [];
   const fmt = (n: number) => formatMoney(n, currency);
   const insights: Insight[] = [];
 
-  for (const p of budgetProgress(txs, budgets)) {
+  for (const p of budgetProgress(txs, budgets, timeZone)) {
     const pct = Math.round(p.pct);
     if (p.status === "over") {
       insights.push({

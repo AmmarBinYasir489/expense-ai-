@@ -29,8 +29,8 @@ function buildContext(
   currency: string,
   timezone: string
 ) {
-  const totals = computeTotals(txs);
-  const changes = categoryMonthChanges(txs);
+  const totals = computeTotals(txs, timezone);
+  const changes = categoryMonthChanges(txs, timezone);
   const recent = txs.slice(0, MAX_TX).map((t) => ({
     date: (t.date ?? t.created_at)?.slice(0, 10),
     type: t.type,
@@ -59,9 +59,9 @@ function buildContext(
       amount: c.lastMonth,
     })),
     spendingByCategoryAllTime: byCategory(txs),
-    last6MonthsExpense: byMonth(txs, 6),
+    last6MonthsExpense: byMonth(txs, 6, timezone),
     thisVsLastMonthByCategory: changes,
-    budgets: budgetProgress(txs, budgets),
+    budgets: budgetProgress(txs, budgets, timezone),
     loans: {
       summary: loanSummary(loans),
       outstanding: loans

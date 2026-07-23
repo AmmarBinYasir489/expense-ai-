@@ -6,7 +6,6 @@ import { createServerClient } from "@supabase/ssr";
 export async function middleware(
   request: NextRequest
 ) {
-console.log("MIDDLEWARE RUNNING");
   let response =
     NextResponse.next();
 
